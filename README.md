@@ -44,5 +44,3 @@ Each folder contains:
 | [Name 3]    | Member     | Shared Memory |
 | [Name 4]    | Member     | Sockets       |
 
-## How to Run
-Instructions for running each demo are inside that technique's own folder.
