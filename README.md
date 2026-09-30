@@ -19,8 +19,8 @@ implementing one:
 
 | Technique       | Description                                              | Assigned To |
 |-----------------|-----------------------------------------------------------|-------------|
-| Pipes           | One-way communication channel between related processes  | [Your Name] |
-| Message Queues  | Messages stored in a queue, read by other processes       | [Name 2]    |
+| Pipes           | One-way communication channel between related processes  | Siddhartha G |
+| Message Queues  | Messages stored in a queue, read by other processes       | Suhana      |
 | Shared Memory   | Common memory segment accessed by multiple processes       | [Name 3]    |
 | Sockets         | Communication over network-style endpoints                | [Name 4]    |
 
@@ -39,8 +39,8 @@ Each folder contains:
 ## Team
 | Name        | Role       | IPC Technique |
 |-------------|------------|---------------|
-| [Your Name] | Team Lead  | Pipes         |
-| [Name 2]    | Member     | Message Queues|
+| Siddhartha G | Team Lead  | Pipes        |
+| Suhana      | Member     | Message Queues|
 | [Name 3]    | Member     | Shared Memory |
 | [Name 4]    | Member     | Sockets       |
 
