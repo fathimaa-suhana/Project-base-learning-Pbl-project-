@@ -41,6 +41,6 @@ Each folder contains:
 |-------------|------------|---------------|
 | Siddhartha G | Team Lead  | Pipes        |
 | Suhana      | Member     | Message Queues|
-| [Name 3]    | Member     | Shared Memory |
-| [Name 4]    | Member     | Sockets       |
+| Rishab Salian| Member     | Shared Memory|
+| Pratyush    | Member     | Sockets       |
 
