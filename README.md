@@ -21,8 +21,8 @@ implementing one:
 |-----------------|-----------------------------------------------------------|-------------|
 | Pipes           | One-way communication channel between related processes  | Siddhartha G |
 | Message Queues  | Messages stored in a queue, read by other processes       | Suhana      |
-| Shared Memory   | Common memory segment accessed by multiple processes       | [Name 3]    |
-| Sockets         | Communication over network-style endpoints                | [Name 4]    |
+| Shared Memory   | Common memory segment accessed by multiple processes      |Rishab Salian|
+| Sockets         | Communication over network-style endpoints                | Pratyush    |
 
 ## Project Structure
 ipc-project/
