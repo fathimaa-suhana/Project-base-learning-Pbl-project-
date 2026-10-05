@@ -45,5 +45,6 @@ gcc unnamed_pipe.c -o unnamed_pipe
 - named pipes (FIFO) = works with any processes
 
 ## Output
-![FIFO demo](screenshots/fifo_output.png)
-![Unnamed pipe demo](screenshots/unnamed_pipe_output.png)
+Screenshot below shows both the FIFO (named pipe) demo and the unnamed pipe demo running successfully:
+
+![Pipes demo output](screenshots/pipes_combined_output.png)
