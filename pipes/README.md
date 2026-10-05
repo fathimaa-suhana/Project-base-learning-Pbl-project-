@@ -43,3 +43,7 @@ gcc unnamed_pipe.c -o unnamed_pipe
 - pipes only go one direction at a time, need 2 if you want both ways
 - unnamed pipes = related processes only
 - named pipes (FIFO) = works with any processes
+
+## Output
+![FIFO demo](screenshots/fifo_output.png)
+![Unnamed pipe demo](screenshots/unnamed_pipe_output.png)
