@@ -35,8 +35,8 @@ Client: socket() -> connect() -> write/read -> close()
 ## Output
 Server (Terminal 1):
 
-![Server output](screenshots/server_output.png)
+![Server output](server_output.png)
 
 Client (Terminal 2):
 
-![Client output](screenshots/client_output.png)
+![Client output](client_output.png)
