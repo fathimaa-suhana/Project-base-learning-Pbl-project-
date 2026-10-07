@@ -3,34 +3,39 @@
 #include <sys/ipc.h>
 #include <sys/msg.h>
 
-struct msg_buffer {
-    long msg_type;
-    char msg_text[100];
-};
+typedef struct {
+    long type;
+    char text[100];
+} Message;
 
 int main() {
-    // same key as what core.c uses for the log queue, so they connect to the same queue
-    key_t log_key = ftok("progfile_log", 66);
-    int log_qid = msgget(log_key, 0666 | IPC_CREAT);
+    key_t loggerKey = ftok("progfile_log", 66);
+    int loggerQueueId = msgget(loggerKey, 0666 | IPC_CREAT);
 
-    struct msg_buffer incoming;
-    FILE *fp = fopen("log.txt", "a");   // "a" = append, so logs build up over runs instead of overwriting
+    Message event;
+    FILE *logFile = fopen("log.txt", "a");
 
-    printf("Logger: waiting for events...\n");
+    if (logFile == NULL) {
+        printf("[LOGGER] ERROR: could not open log file\n");
+        return 1;
+    }
+
+    printf("[LOGGER] Ready, listening for events from Core...\n");
 
     while (1) {
-        // msg_type 2 = result/event messages, matches what core.c sends
-        msgrcv(log_qid, &incoming, sizeof(incoming), 2, 0);
-        printf("Logger received: %s\n", incoming.msg_text);
-        fprintf(fp, "%s\n", incoming.msg_text);
-        fflush(fp);   // force write to disk immediately instead of buffering
+        msgrcv(loggerQueueId, &event, sizeof(event), 2, 0);
+        printf("[LOGGER] logged: %s\n", event.text);
 
-        if (strcmp(incoming.msg_text, "Core shutting down") == 0) {
+        fprintf(logFile, "%s\n", event.text);
+        fflush(logFile);
+
+        if (strcmp(event.text, "Core process exiting now") == 0) {
+            printf("[LOGGER] shutdown signal received, closing.\n");
             break;
         }
     }
 
-    fclose(fp);
-    msgctl(log_qid, IPC_RMID, NULL);   // clean up the queue once done
+    fclose(logFile);
+    msgctl(loggerQueueId, IPC_RMID, NULL);
     return 0;
 }
