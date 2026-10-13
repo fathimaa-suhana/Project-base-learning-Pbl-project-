@@ -22,7 +22,7 @@ implementing one:
 | Pipes           | One-way communication channel between related processes  | Siddhartha G     |
 | Message Queues  | Messages stored in a queue, read by other processes       | Suhana           |
 | Shared Memory   | Common memory segment accessed by multiple processes       | Rishab Salian    |
-| Sockets         | Communication over network-style endpoints                | Pratyush         |
+| Sockets         | Communication over network-style endpoints                | Prathyush         |
 
 ## Week 2 — Multi-Process Simulator
 On top of the 4 core techniques, we also built a small multi-process simulator 
@@ -34,7 +34,7 @@ separate processes that talk to each other using Message Queues.
 | Process | What it does                                   | Assigned To     |
 |---------|-------------------------------------------------|------------------|
 | UI      | Takes user commands, sends them to Core         | Suhana           |
-| Core    | Executes the commands (stack ops, add, etc.)    | Pratyush          |
+| Core    | Executes the commands (stack ops, add, etc.)    | Prathyush          |
 | Logger  | Receives results/events, writes them to log.txt | Rishab Salian    |
 
 We also built a baseline single-process version (`simulator.c`) to compare 
@@ -66,7 +66,7 @@ Each of the 4 technique folders contains:
 | Siddhartha G  | Team Lead  | Pipes          |
 | Suhana        | Member     | Message Queues |
 | Rishab Salian | Member     | Shared Memory  |
-| Pratyush      | Member     | Sockets        |
+| Prathyush      | Member     | Sockets        |
 
 ## How to Run
 Instructions for running each demo are inside that technique's own folder.
