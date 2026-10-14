@@ -121,3 +121,19 @@ Further testing with varied arrival times, burst times, priorities, and CPU idle
 ## Status
 
 Week 3 implementation and initial algorithm testing completed.
+## Screenshots
+
+### FCFS Scheduling
+![FCFS output](screenshots/fcfs.png)
+
+### SJF and SRTF Scheduling
+![SJF and SRTF output](screenshots/sjf-srtf.png)
+
+### Priority Preemptive Scheduling
+![Priority scheduling output](screenshots/priority-preemptive.png)
+
+### Round Robin Scheduling
+![Round Robin output](screenshots/round-robin.png)
+
+### Invalid Input Handling
+![Invalid input output](screenshots/invalid-input.png)
