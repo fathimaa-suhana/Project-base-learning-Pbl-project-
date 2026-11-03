@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Page Replacement Simulator</title>
+<style>
+:root{--bg:#fff;--fg:#1a1a1a;--card:#f3f4f6;--bd:#c9ccd1;--hit:#15803d;--flt:#b91c1c;--ac:#2563eb}
+@media (prefers-color-scheme:dark){:root{--bg:#14161a;--fg:#e8e8e8;--card:#1f2228;--bd:#3a3f48;--hit:#4ade80;--flt:#f87171;--ac:#60a5fa}}
+body{margin:0 auto;padding:16px;background:var(--bg);color:var(--fg);font:14px system-ui,sans-serif;max-width:1000px}
+h1{font-size:20px;margin:0 0 10px}h2{font-size:15px;margin:0 0 6px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:8px;padding:10px;margin-bottom:10px}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:end}
+label{display:flex;flex-direction:column;font-size:12px;gap:2px}
+input,select{background:var(--bg);color:var(--fg);border:1px solid var(--bd);border-radius:4px;padding:5px;font-size:14px}
+button{background:var(--ac);color:#fff;border:0;border-radius:5px;padding:7px 14px;cursor:pointer}
+button.g{background:transparent;color:var(--fg);border:1px solid var(--bd)}
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;min-width:300px}
+th,td{border:1px solid var(--bd);padding:4px 10px;text-align:center}
+.Hit{color:var(--hit);font-weight:700}.Fault{color:var(--flt);font-weight:700}
+#err{color:var(--flt);font-weight:600;margin-top:6px}
+.bar{height:16px;background:var(--bg);border:1px solid var(--bd);border-radius:4px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--flt)}
+.best{color:var(--hit);font-weight:700}
+</style></head><body>
+<h1>Page Replacement Algorithms Simulator</h1>
+
+<div class="card">
+ <div class="row">
+  <label>Page-reference string (space or comma separated)
+   <input id="refs" size="34" value="7 0 1 2 0 3 0 4 2 3"></label>
+  <label>Number of page frames
+   <input id="k" type="number" value="3" min="1" max="10" style="width:90px"></label>
+  <label>Algorithm
+   <select id="alg">
+    <option value="FIFO">1. FIFO</option>
+    <option value="LRU">2. LRU</option>
+    <option value="Optimal">3. Optimal</option>
+    <option value="ALL" selected>4. Compare all algorithms</option>
+   </select></label>
+  <button onclick="run()">Simulate</button>
+  <button class="g" onclick="randomRefs()">Random string</button>
+ </div>
+ <div id="err"></div>
+</div>
+<div id="out"></div>
+
+<script>
+const $=id=>document.getElementById(id);
+
+function simulate(algo,refs,k){
+ let fr=Array(k).fill(null),steps=[],ptr=0,last={};
+ refs.forEach((p,t)=>{
+  const hit=fr.includes(p);
+  if(!hit){
+   let slot=fr.indexOf(null);
+   if(slot<0){
+    if(algo==='FIFO'){slot=ptr;ptr=(ptr+1)%k}
+    else if(algo==='LRU'){slot=0;for(let i=1;i<k;i++)if(last[fr[i]]<last[fr[slot]])slot=i}
+    else{ // Optimal: evict page used farthest in the future (or never again)
+     let far=-1;slot=0;
+     for(let i=0;i<k;i++){
+      let nx=refs.indexOf(fr[i],t+1);if(nx<0)nx=Infinity;
+      if(nx>far){far=nx;slot=i}}}}
+   fr[slot]=p}
+  last[p]=t;
+  steps.push({p,fr:[...fr],hit})});
+ const hits=steps.filter(s=>s.hit).length;
+ return{algo,steps,hits,faults:refs.length-hits,n:refs.length}}
+
+function pct(a,n){return (100*a/n).toFixed(1)+'%'}
+
+function stepTable(r,k){
+ let h=`<h2>${r.algo}: step-by-step</h2><div class="scroll"><table><tr><th>Page</th>`+
+  [...Array(k)].map((_,i)=>`<th>Frame ${i+1}</th>`).join('')+'<th>Status</th></tr>';
+ r.steps.forEach(s=>{
+  h+=`<tr><td><b>${s.p}</b></td>`+s.fr.map(v=>`<td>${v===null?'&mdash;':v}</td>`).join('')+
+   `<td class="${s.hit?'Hit':'Fault'}">${s.hit?'Hit':'Fault'}</td></tr>`});
+ return h+'</table></div>'}
+
+function summary(r){
+ return `<table style="margin-top:8px"><tr><th>Metric</th><th>${r.algo}</th></tr>
+ <tr><td>Total page references</td><td>${r.n}</td></tr>
+ <tr><td>Total page hits</td><td>${r.hits}</td></tr>
+ <tr><td>Total page faults</td><td>${r.faults}</td></tr>
+ <tr><td>Page hit ratio</td><td>${pct(r.hits,r.n)}</td></tr>
+ <tr><td>Page fault ratio</td><td>${pct(r.faults,r.n)}</td></tr></table>`}
+
+function run(){
+ $('err').textContent='';$('out').innerHTML='';
+ const raw=$('refs').value.trim();
+ if(!raw){return err('Reference string is empty. Enter page numbers like: 7 0 1 2 0 3')}
+ const refs=raw.split(/[\s,]+/).map(Number);
+ if(refs.some(x=>!Number.isInteger(x)||x<0))return err('Reference string must contain only non-negative whole numbers.');
+ if(refs.length>60)return err('Please use at most 60 page references.');
+ const k=Number($('k').value);
+ if(!Number.isInteger(k)||k<=0)return err('Number of frames must be a positive whole number.');
+ if(k>10)return err('Please use at most 10 frames.');
+ const sel=$('alg').value,list=sel==='ALL'?['FIFO','LRU','Optimal']:[sel];
+ const res=list.map(a=>simulate(a,refs,k));
+ let h='';
+ res.forEach(r=>{h+=`<div class="card">${stepTable(r,k)}${summary(r)}</div>`});
+ if(res.length>1){
+  const min=Math.min(...res.map(r=>r.faults)),max=Math.max(1,...res.map(r=>r.faults));
+  const best=res.filter(r=>r.faults===min).map(r=>r.algo);
+  h+=`<div class="card"><h2>Algorithm comparison</h2><table><tr><th>Algorithm</th><th>Page Hits</th><th>Page Faults</th><th>Fault Ratio</th><th style="min-width:160px">Faults</th></tr>`+
+   res.map(r=>`<tr><td>${r.algo}</td><td>${r.hits}</td><td>${r.faults}</td><td>${pct(r.faults,r.n)}</td>
+   <td><div class="bar"><i style="width:${100*r.faults/max}%"></i></div></td></tr>`).join('')+
+   `</table><p class="best">Fewest page faults (${min}): ${best.join(', ')}</p>
+   <p><small>Optimal is a theoretical lower bound (it needs to know future requests), so no real algorithm can beat it. Note that for some strings FIFO can get worse with more frames (Belady's anomaly).</small></p></div>`}
+ $('out').innerHTML=h}
+
+function err(m){$('err').textContent=m}
+
+function randomRefs(){
+ $('refs').value=[...Array(15)].map(()=>Math.floor(Math.random()*8)).join(' ');run()}
+run();
+</script></body></html>
