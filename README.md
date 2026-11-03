@@ -68,5 +68,27 @@ Each of the 4 technique folders contains:
 | Rishab Salian | Member     | Shared Memory  |
 | Prathyush      | Member     | Sockets        |
 
+## Weekly Work
+
+| Week | Topic | Folder | What it is |
+|---|---|---|---|
+| 2 | Multi-process simulator | `week-2-simulator/` | UI, Core and Logger as 3 separate processes talking via message queues, plus a single-process baseline |
+| 3 | CPU scheduling | `week-3-scheduling/` | C simulator for FCFS, SJF, SRTF, Priority (both versions) and Round Robin, with Gantt charts and analysis |
+| 4 | Deadlock simulation | `week-4-deadlock/` | Browser GUI with Banker's Algorithm, deadlock detection, Resource Allocation Graph and recovery |
+| - | Page replacement | `week-page-replacement/` | Browser GUI for FIFO, LRU and Optimal, with a step-by-step table and comparison |
+
+### Who did what
+| Work | Owner |
+|---|---|
+| Week 2: UI / Core / Logger | Suhana / Prathyush / Rishab |
+| Week 2: Integration | Siddhartha G |
+| Week 3: FCFS + SJF / Priority / Round Robin | Suhana / Prathyush / Rishab |
+| Week 3: main program, testing | Siddhartha G |
+| Week 4 (Deadlock) and Page Replacement | siddharatha G /Suhana / Prathyush / Rishab  |
+
+### How to run
+- Week 2 and 3 (C): compile the `.c` files in the folder with `gcc`, as described in each folder's README
+- Week 4 and Page Replacement: open the `.html` file in any browser
+
 ## How to Run
 Instructions for running each demo are inside that technique's own folder.
