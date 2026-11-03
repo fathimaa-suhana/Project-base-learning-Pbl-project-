@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Deadlock Simulation System</title>
+<style>
+:root{--bg:#fff;--fg:#1a1a1a;--card:#f3f4f6;--bd:#c9ccd1;--ok:#15803d;--warn:#b45309;--bad:#b91c1c;--ac:#2563eb}
+@media (prefers-color-scheme:dark){:root{--bg:#14161a;--fg:#e8e8e8;--card:#1f2228;--bd:#3a3f48;--ok:#4ade80;--warn:#fbbf24;--bad:#f87171;--ac:#60a5fa}}
+body{margin:0;padding:16px;background:var(--bg);color:var(--fg);font:14px system-ui,sans-serif;max-width:1000px;margin:auto}
+h1{font-size:20px;margin:0 0 10px}h3{margin:0 0 6px;font-size:14px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:8px;padding:10px;margin-bottom:10px}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:10px}
+table{border-collapse:collapse}td,th{padding:2px 3px;text-align:center}
+input,select{background:var(--bg);color:var(--fg);border:1px solid var(--bd);border-radius:4px;padding:3px}
+td input{width:38px;text-align:center}.wide{width:120px}
+button{background:var(--ac);color:#fff;border:0;border-radius:5px;padding:6px 10px;cursor:pointer}
+button.g{background:transparent;color:var(--fg);border:1px solid var(--bd)}
+#badge{font-weight:700;padding:4px 12px;border-radius:12px;border:2px solid}
+.SAFE{color:var(--ok)}.UNSAFE{color:var(--warn)}.DEADLOCKED{color:var(--bad)}
+canvas{width:100%;max-width:700px;display:block}
+.bar{height:12px;background:var(--bg);border:1px solid var(--bd);border-radius:6px;overflow:hidden;margin:2px 0 6px}
+.bar i{display:block;height:100%;background:var(--ac)}
+#log{max-height:180px;overflow:auto;font:12px monospace;white-space:pre-wrap}
+</style></head><body>
+<h1>Deadlock Simulation System</h1>
+
+<div class="card row">
+ Processes <input id="n" type="number" value="5" min="1" max="8" style="width:50px">
+ Resources <input id="m" type="number" value="3" min="1" max="5" style="width:50px">
+ <button onclick="build()">1-2. Create</button>
+ <button class="g" onclick="sample(0)">Load safe sample</button>
+ <button class="g" onclick="sample(1)">Load deadlock sample</button>
+</div>
+
+<div class="grid">
+ <div class="card"><h3>Available vector</h3><div id="avT"></div></div>
+ <div class="card"><h3>3. Allocation matrix</h3><div id="alT"></div></div>
+ <div class="card"><h3>4. Maximum matrix</h3><div id="mxT"></div></div>
+ <div class="card"><h3>5. Need matrix (Max - Allocation)</h3><div id="needT"></div></div>
+ <div class="card"><h3>Pending requests</h3><div id="reqT"></div></div>
+</div>
+
+<div class="card">
+ <h3>7. Request resources</h3>
+ <div class="row">
+  Process <select id="rp"></select>
+  Request vector <input id="rv" class="wide" placeholder="e.g. 1 0 2">
+  <label><input type="checkbox" id="byp"> bypass Banker's (no avoidance)</label>
+  <button onclick="request()">Request</button>
+ </div>
+</div>
+
+<div class="card row">
+ <button onclick="banker()">8. Run Banker's Algorithm</button>
+ <button onclick="detectBtn()">9. Detect Deadlock</button>
+ <button onclick="recover()">10. Recover from Deadlock</button>
+ <button class="g" onclick="refresh();log('Status refreshed')">11. Display Status</button>
+ <span>State: <span id="badge"></span></span>
+</div>
+
+<div class="grid">
+ <div class="card"><h3>6. Resource Allocation Graph</h3><canvas id="cv" width="700" height="320"></canvas>
+  <small>Solid: resource to process (allocated). Dashed: process to resource (waiting). Red process = deadlocked.</small></div>
+ <div class="card"><h3>Resource utilization</h3><div id="util"></div><h3>Safe sequence</h3><div id="seq">-</div></div>
+</div>
+<div class="card"><h3>Log</h3><div id="log"></div></div>
+
+<script>
+const $=id=>document.getElementById(id);
+let S={n:0,m:0,av:[],al:[],mx:[],req:[],term:[],dead:[]};
+
+function grid(id,rows,cols,lab){
+ let h='<table><tr><th></th>'+[...Array(cols)].map((_,j)=>`<th>R${j}</th>`).join('')+'</tr>';
+ for(let i=0;i<rows;i++){h+=`<tr><th>${lab(i)}</th>`;
+  for(let j=0;j<cols;j++)h+=`<td><input id="${id}_${i}_${j}" type="number" min="0" value="0" onchange="refresh()"></td>`;
+  h+='</tr>'}
+ return h+'</table>'}
+function readG(id,r,c){return [...Array(r)].map((_,i)=>[...Array(c)].map((_,j)=>Math.max(0,+$(`${id}_${i}_${j}`).value||0)))}
+function setG(id,M){M.forEach((row,i)=>row.forEach((v,j)=>$(`${id}_${i}_${j}`).value=v))}
+function log(t){$('log').textContent=t+'\n'+$('log').textContent}
+const zeros=(n,m)=>[...Array(n)].map(()=>Array(m).fill(0));
+
+function build(){
+ const n=Math.min(8,Math.max(1,+$('n').value||1)),m=Math.min(5,Math.max(1,+$('m').value||1));
+ S.n=n;S.m=m;S.term=Array(n).fill(false);S.req=zeros(n,m);
+ $('avT').innerHTML=grid('av',1,m,()=>'Avail');
+ $('alT').innerHTML=grid('al',n,m,i=>'P'+i);
+ $('mxT').innerHTML=grid('mx',n,m,i=>'P'+i);
+ $('rp').innerHTML=[...Array(n)].map((_,i)=>`<option value="${i}">P${i}</option>`).join('');
+ log(`Created ${n} processes and ${m} resource types. Fill in the matrices.`);refresh()}
+
+function sync(){
+ S.av=readG('av',1,S.m)[0];S.al=readG('al',S.n,S.m);S.mx=readG('mx',S.n,S.m);
+ for(let i=0;i<S.n;i++)for(let j=0;j<S.m;j++)if(S.mx[i][j]<S.al[i][j]){
+  $('badge').textContent='INPUT ERROR';return false}
+ return true}
+const need=i=>S.mx[i].map((x,j)=>x-S.al[i][j]);
+const le=(a,b)=>a.every((x,j)=>x<=b[j]);
+
+function safety(av,al,term){
+ let w=[...av],fin=term.slice(),seq=[],tr=[],ch=true;
+ while(ch){ch=false;
+  for(let i=0;i<S.n;i++){
+   if(fin[i])continue;
+   if(le(S.mx[i].map((x,j)=>x-al[i][j]),w)){
+    w=w.map((x,j)=>x+al[i][j]);fin[i]=true;seq.push(i);tr.push(`P${i} can finish -> work=[${w}]`);ch=true}}}
+ return fin.every(x=>x)?{seq,tr}:null}
+
+function detect(){
+ let w=[...S.av],fin=S.term.slice(),ch=true;
+ while(ch){ch=false;
+  for(let i=0;i<S.n;i++)if(!fin[i]&&le(S.req[i],w)){w=w.map((x,j)=>x+S.al[i][j]);fin[i]=true;ch=true}}
+ return fin.map((f,i)=>f?-1:i).filter(i=>i>=0)}
+
+function state(){
+ const d=detect();S.dead=d;
+ if(d.length)return{s:'DEADLOCKED',r:null};
+ const r=safety(S.av,S.al,S.term);
+ return{s:r?'SAFE':'UNSAFE',r}}
+
+function refresh(){
+ if(!S.n)return;
+ if(!sync())return;
+ $('needT').innerHTML='<table><tr><th></th>'+[...Array(S.m)].map((_,j)=>`<th>R${j}</th>`).join('')+'</tr>'+
+  S.al.map((_,i)=>`<tr><th>P${i}</th>`+need(i).map(v=>`<td>${v}</td>`).join('')+'</tr>').join('')+'</table>';
+ const pend=S.req.map((r,i)=>r.some(x=>x)?`P${i} waits for [${r}]`:null).filter(Boolean);
+ $('reqT').innerHTML=pend.length?pend.join('<br>'):'none';
+ const st=state();
+ $('badge').textContent=st.s;$('badge').className=st.s;
+ $('seq').textContent=st.r?st.r.seq.map(i=>'P'+i).join(' -> '):(st.s==='DEADLOCKED'?'none (deadlocked: '+S.dead.map(i=>'P'+i).join(', ')+')':'none (unsafe)');
+ let u='';
+ for(let j=0;j<S.m;j++){
+  const used=S.al.reduce((a,r)=>a+r[j],0),tot=used+S.av[j],p=tot?Math.round(100*used/tot):0;
+  u+=`R${j}: ${used}/${tot} in use (${p}%)<div class="bar"><i style="width:${p}%"></i></div>`}
+ $('util').innerHTML=u;
+ draw()}
+
+function arrow(c,x1,y1,x2,y2,dash,col,lbl){
+ c.strokeStyle=col;c.fillStyle=col;c.setLineDash(dash?[6,4]:[]);c.lineWidth=1.6;
+ c.beginPath();c.moveTo(x1,y1);c.lineTo(x2,y2);c.stroke();c.setLineDash([]);
+ const a=Math.atan2(y2-y1,x2-x1);
+ c.beginPath();c.moveTo(x2,y2);c.lineTo(x2-9*Math.cos(a-.4),y2-9*Math.sin(a-.4));c.lineTo(x2-9*Math.cos(a+.4),y2-9*Math.sin(a+.4));c.fill();
+ if(lbl>1)c.fillText(lbl,(x1+x2)/2,(y1+y2)/2-4)}
+
+function draw(){
+ const cv=$('cv'),c=cv.getContext('2d'),cs=getComputedStyle(document.body);
+ const fg=cs.color,bad=cs.getPropertyValue('--bad'),ac=cs.getPropertyValue('--ac'),ok=cs.getPropertyValue('--ok');
+ c.clearRect(0,0,700,320);c.font='13px sans-serif';c.textAlign='center';c.textBaseline='middle';
+ const py=i=>(i+1)*320/(S.n+1),ry=j=>(j+1)*320/(S.m+1),PX=130,RX=560;
+ for(let i=0;i<S.n;i++)for(let j=0;j<S.m;j++){
+  if(S.al[i][j]>0)arrow(c,RX-24,ry(j)-5,PX+19,py(i)-5,false,ok,S.al[i][j]);
+  if(S.req[i][j]>0&&!S.term[i])arrow(c,PX+19,py(i)+5,RX-24,ry(j)+5,true,bad,S.req[i][j])}
+ for(let i=0;i<S.n;i++){
+  c.beginPath();c.arc(PX,py(i),18,0,7);c.lineWidth=2;
+  c.strokeStyle=S.dead.includes(i)?bad:ac;c.fillStyle=S.term[i]?'#8884':(S.dead.includes(i)?bad:'transparent');c.fill();c.stroke();
+  c.fillStyle=S.dead.includes(i)?'#fff':fg;c.fillText('P'+i+(S.term[i]?'x':''),PX,py(i))}
+ for(let j=0;j<S.m;j++){
+  const tot=S.al.reduce((a,r)=>a+r[j],0)+S.av[j];
+  c.strokeStyle=fg;c.lineWidth=2;c.strokeRect(RX-22,ry(j)-15,44,30);
+  c.fillStyle=fg;c.fillText('R'+j,RX,ry(j)-5);c.fillText('x'+tot,RX,ry(j)+8)}}
+
+function parseV(s){return s.trim().split(/[\s,]+/).map(Number)}
+function grant(i,r){S.al[i]=S.al[i].map((x,j)=>x+r[j]);S.av=S.av.map((x,j)=>x-r[j]);S.req[i]=Array(S.m).fill(0);setG('al',S.al);setG('av',[S.av])}
+
+function request(){
+ if(!sync())return;
+ const i=+$('rp').value,r=parseV($('rv').value);
+ if(r.length!==S.m||r.some(x=>isNaN(x)||x<0)){log(`ERROR: enter ${S.m} non-negative numbers`);return}
+ if(S.term[i]){log(`ERROR: P${i} was terminated`);return}
+ if(!le(r,need(i))){log(`P${i} request [${r}] exceeds its maximum claim -> ERROR`);return}
+ if(!le(r,S.av)){S.req[i]=r;log(`P${i} request [${r}] > available [${S.av}] -> P${i} BLOCKED (waiting)`);refresh();return}
+ if($('byp').checked){grant(i,r);log(`P${i} request [${r}] GRANTED (Banker's bypassed)`);refresh();return}
+ const av2=S.av.map((x,j)=>x-r[j]),al2=S.al.map((row,k)=>k===i?row.map((x,j)=>x+r[j]):row);
+ const res=safety(av2,al2,S.term);
+ if(res){grant(i,r);log(`P${i} request [${r}] GRANTED. Still safe: ${res.seq.map(k=>'P'+k).join(' -> ')}`)}
+ else{S.req[i]=r;log(`P${i} request [${r}] DENIED by Banker's: granting it leads to an UNSAFE state. P${i} waits.`)}
+ refresh()}
+
+function banker(){
+ if(!sync())return;
+ const r=safety(S.av,S.al,S.term);
+ if(r)log("Banker's: SAFE. Sequence "+r.seq.map(i=>'P'+i).join(' -> ')+'\n  '+r.tr.join('\n  '));
+ else log("Banker's: NO safe sequence -> state is UNSAFE");
+ refresh()}
+
+function detectBtn(){
+ if(!sync())return;
+ const d=detect();
+ log(d.length?`Deadlock detected! Processes involved: ${d.map(i=>'P'+i).join(', ')}`:'No deadlock detected (no process is permanently blocked).');
+ refresh()}
+
+function recover(){
+ if(!sync())return;
+ const d=detect();
+ if(!d.length){log('Nothing to recover: no deadlock.');return}
+ const cost=i=>S.al[i].reduce((a,x)=>a+x,0);
+ const v=d.reduce((a,b)=>cost(b)<cost(a)?b:a);
+ S.av=S.av.map((x,j)=>x+S.al[v][j]);log(`RECOVERY: terminated P${v} (cheapest victim, held [${S.al[v]}]); resources released.`);
+ S.al[v]=Array(S.m).fill(0);S.req[v]=Array(S.m).fill(0);S.term[v]=true;
+ for(let i=0;i<S.n;i++)if(!S.term[i]&&S.req[i].some(x=>x)&&le(S.req[i],S.av)){log(`P${i}'s waiting request [${S.req[i]}] now granted`);grant(i,S.req[i])}
+ setG('al',S.al);setG('av',[S.av]);refresh()}
+
+function sample(k){
+ const D=k?{n:2,m:2,av:[0,0],al:[[1,0],[0,1]],mx:[[1,1],[1,1]],rq:[[0,1],[1,0]]}
+  :{n:5,m:3,av:[3,3,2],al:[[0,1,0],[2,0,0],[3,0,2],[2,1,1],[0,0,2]],mx:[[7,5,3],[3,2,2],[9,0,2],[2,2,2],[4,3,3]],rq:zeros(5,3)};
+ $('n').value=D.n;$('m').value=D.m;build();
+ setG('av',[D.av]);setG('al',D.al);setG('mx',D.mx);S.req=D.rq;
+ log(k?'Loaded deadlock sample: P0 holds R0 and wants R1, P1 holds R1 and wants R0. Try "Recover".'
+ :'Loaded safe sample (classic textbook state). Try P1 requesting 1 0 2.');
+ refresh()}
+sample(0);
+</script></body></html>
