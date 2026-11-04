@@ -110,6 +110,31 @@ All six scheduling options compiled and ran successfully with the sample three-p
 
 Further testing with varied arrival times, burst times, priorities, and CPU idle periods is recommended.
 
+## Analysis – Priority Scheduling
+
+Priority Scheduling was tested using three test cases in both non-preemptive and preemptive modes.
+
+### Test Results
+
+| Test Case | Scheduling Mode | Average Waiting Time (WT) | Average Turnaround Time (TAT) | CPU Utilization |
+|---|---|---:|---:|---:|
+| Test 1 | Non-preemptive | 6.00 | 10.25 | 100% |
+| Test 1 | Preemptive | 3.75 | 8.00 | 100% |
+| Test 2 | Non-preemptive | 4.00 | 7.50 | 100% |
+| Test 2 | Preemptive | 4.00 | 7.50 | 100% |
+| Test 3 | Non-preemptive | 0.33 | 3.33 | 64.3% |
+| Test 3 | Preemptive | 0.67 | 3.67 | 64.3% |
+
+### Observations
+
+- **Test 1:** Preemptive Priority Scheduling performed better, with lower average waiting time and turnaround time because higher-priority processes could interrupt the running process.
+- **Test 2:** Both modes produced identical results because no newly arriving process caused a higher-priority interruption.
+- **Test 3:** Non-preemptive scheduling performed slightly better. In preemptive mode, P2 interrupted P1 because P2 had a higher priority, increasing P1's waiting time and turnaround time. CPU utilization was 64.3% in both modes due to CPU idle periods.
+
+### Conclusion
+
+The results show that neither mode performs best in every situation. Preemptive Priority Scheduling can reduce waiting time when higher-priority processes arrive during execution. However, interruptions can increase the waiting time of an already running process. The performance depends on process arrival times, burst times, and priority values.
+
 ## Learning Outcomes
 
 - Understanding CPU scheduling strategies.
