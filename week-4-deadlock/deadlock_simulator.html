@@ -1,5 +1,7 @@
 <!DOCTYPE html>
-<html lang="en"><head><meta charset="utf-8">
+<html lang="en">
+<head>
+<meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Deadlock Simulation System</title>
 <style>
@@ -17,11 +19,14 @@ button{background:var(--ac);color:#fff;border:0;border-radius:5px;padding:6px 10
 button.g{background:transparent;color:var(--fg);border:1px solid var(--bd)}
 #badge{font-weight:700;padding:4px 12px;border-radius:12px;border:2px solid}
 .SAFE{color:var(--ok)}.UNSAFE{color:var(--warn)}.DEADLOCKED{color:var(--bad)}
-canvas{width:100%;max-width:700px;display:block}
+canvas{width:100%;max-width:700px;display:block;background:var(--bg);border-radius:6px}
 .bar{height:12px;background:var(--bg);border:1px solid var(--bd);border-radius:6px;overflow:hidden;margin:2px 0 6px}
 .bar i{display:block;height:100%;background:var(--ac)}
 #log{max-height:180px;overflow:auto;font:12px monospace;white-space:pre-wrap}
-</style></head><body>
+.legend{font-size:12px;margin-top:6px;color:var(--fg);opacity:0.9}
+</style>
+</head>
+<body>
 <h1>Deadlock Simulation System</h1>
 
 <div class="card row">
@@ -59,10 +64,23 @@ canvas{width:100%;max-width:700px;display:block}
 </div>
 
 <div class="grid">
- <div class="card"><h3>6. Resource Allocation Graph</h3><canvas id="cv" width="700" height="320"></canvas>
-  <small>Solid: resource to process (allocated). Dashed: process to resource (waiting). Red process = deadlocked.</small></div>
- <div class="card"><h3>Resource utilization</h3><div id="util"></div><h3>Safe sequence</h3><div id="seq">-</div></div>
+ <div class="card">
+  <h3>6. Resource Allocation Graph</h3>
+  <canvas id="cv" width="700" height="320"></canvas>
+  <div class="legend">
+   <b>Legend:</b> Circle = Process (Red fill = Deadlocked) &bull; Box = Resource &bull;
+   <span style="color:var(--ok);font-weight:600">Solid green</span> = Allocated (R &rarr; P) &bull;
+   <span style="color:var(--bad);font-weight:600">Dashed red</span> = Request / Waiting (P &rarr; R)
+  </div>
+ </div>
+ <div class="card">
+  <h3>Resource utilization</h3>
+  <div id="util"></div>
+  <h3>Safe sequence</h3>
+  <div id="seq">-</div>
+ </div>
 </div>
+
 <div class="card"><h3>Log</h3><div id="log"></div></div>
 
 <script>
@@ -75,6 +93,7 @@ function grid(id,rows,cols,lab){
   for(let j=0;j<cols;j++)h+=`<td><input id="${id}_${i}_${j}" type="number" min="0" value="0" onchange="refresh()"></td>`;
   h+='</tr>'}
  return h+'</table>'}
+
 function readG(id,r,c){return [...Array(r)].map((_,i)=>[...Array(c)].map((_,j)=>Math.max(0,+$(`${id}_${i}_${j}`).value||0)))}
 function setG(id,M){M.forEach((row,i)=>row.forEach((v,j)=>$(`${id}_${i}_${j}`).value=v))}
 function log(t){$('log').textContent=t+'\n'+$('log').textContent}
@@ -92,8 +111,11 @@ function build(){
 function sync(){
  S.av=readG('av',1,S.m)[0];S.al=readG('al',S.n,S.m);S.mx=readG('mx',S.n,S.m);
  for(let i=0;i<S.n;i++)for(let j=0;j<S.m;j++)if(S.mx[i][j]<S.al[i][j]){
-  $('badge').textContent='INPUT ERROR';return false}
+  $('badge').textContent='INPUT ERROR';
+  log(`Input Warning: P${i} Allocation for R${j} (${S.al[i][j]}) exceeds Maximum claim (${S.mx[i][j]}).`);
+  return false}
  return true}
+
 const need=i=>S.mx[i].map((x,j)=>x-S.al[i][j]);
 const le=(a,b)=>a.every((x,j)=>x<=b[j]);
 
@@ -146,12 +168,19 @@ function draw(){
  const cv=$('cv'),c=cv.getContext('2d'),cs=getComputedStyle(document.body);
  const fg=cs.color,bad=cs.getPropertyValue('--bad'),ac=cs.getPropertyValue('--ac'),ok=cs.getPropertyValue('--ok');
  c.clearRect(0,0,700,320);c.font='13px sans-serif';c.textAlign='center';c.textBaseline='middle';
- const py=i=>(i+1)*320/(S.n+1),ry=j=>(j+1)*320/(S.m+1),PX=130,RX=560;
+ 
+ // Column header titles
+ c.fillStyle=fg;c.font='bold 14px sans-serif';
+ c.fillText('Processes',130,16);
+ c.fillText('Resources',560,16);
+ c.font='13px sans-serif';
+
+ const py=i=>(i+1)*270/(S.n+1)+25,ry=j=>(j+1)*270/(S.m+1)+25,PX=130,RX=560;
  for(let i=0;i<S.n;i++)for(let j=0;j<S.m;j++){
   if(S.al[i][j]>0)arrow(c,RX-24,ry(j)-5,PX+19,py(i)-5,false,ok,S.al[i][j]);
   if(S.req[i][j]>0&&!S.term[i])arrow(c,PX+19,py(i)+5,RX-24,ry(j)+5,true,bad,S.req[i][j])}
  for(let i=0;i<S.n;i++){
-  c.beginPath();c.arc(PX,py(i),18,0,7);c.lineWidth=2;
+  c.beginPath();c.arc(PX,py(i),18,0,Math.PI*2);c.lineWidth=2;
   c.strokeStyle=S.dead.includes(i)?bad:ac;c.fillStyle=S.term[i]?'#8884':(S.dead.includes(i)?bad:'transparent');c.fill();c.stroke();
   c.fillStyle=S.dead.includes(i)?'#fff':fg;c.fillText('P'+i+(S.term[i]?'x':''),PX,py(i))}
  for(let j=0;j<S.m;j++){
@@ -208,5 +237,7 @@ function sample(k){
  log(k?'Loaded deadlock sample: P0 holds R0 and wants R1, P1 holds R1 and wants R0. Try "Recover".'
  :'Loaded safe sample (classic textbook state). Try P1 requesting 1 0 2.');
  refresh()}
-sample(0);
-</script></body></html>
+if(window.location.search.includes('deadlock')) sample(1); else sample(0);
+</script>
+</body>
+</html>

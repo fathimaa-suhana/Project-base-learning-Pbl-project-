@@ -1,5 +1,7 @@
 <!DOCTYPE html>
-<html lang="en"><head><meta charset="utf-8">
+<html lang="en">
+<head>
+<meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Page Replacement Simulator</title>
 <style>
@@ -14,14 +16,18 @@ input,select{background:var(--bg);color:var(--fg);border:1px solid var(--bd);bor
 button{background:var(--ac);color:#fff;border:0;border-radius:5px;padding:7px 14px;cursor:pointer}
 button.g{background:transparent;color:var(--fg);border:1px solid var(--bd)}
 .scroll{overflow-x:auto}
-table{border-collapse:collapse;min-width:300px}
+table{border-collapse:collapse;min-width:300px;width:100%}
 th,td{border:1px solid var(--bd);padding:4px 10px;text-align:center}
+th{background:rgba(0,0,0,0.04)}
 .Hit{color:var(--hit);font-weight:700}.Fault{color:var(--flt);font-weight:700}
 #err{color:var(--flt);font-weight:600;margin-top:6px}
 .bar{height:16px;background:var(--bg);border:1px solid var(--bd);border-radius:4px;overflow:hidden}
 .bar i{display:block;height:100%;background:var(--flt)}
 .best{color:var(--hit);font-weight:700}
-</style></head><body>
+.formula{font-size:12px;color:var(--fg);opacity:0.8;margin-top:6px}
+</style>
+</head>
+<body>
 <h1>Page Replacement Algorithms Simulator</h1>
 
 <div class="card">
@@ -38,6 +44,7 @@ th,td{border:1px solid var(--bd);padding:4px 10px;text-align:center}
     <option value="ALL" selected>4. Compare all algorithms</option>
    </select></label>
   <button onclick="run()">Simulate</button>
+  <button class="g" onclick="loadPdfSample()">Load PDF sample</button>
   <button class="g" onclick="randomRefs()">Random string</button>
  </div>
  <div id="err"></div>
@@ -70,7 +77,7 @@ function simulate(algo,refs,k){
 function pct(a,n){return (100*a/n).toFixed(1)+'%'}
 
 function stepTable(r,k){
- let h=`<h2>${r.algo}: step-by-step</h2><div class="scroll"><table><tr><th>Page</th>`+
+ let h=`<h2>${r.algo}: Step-by-Step Simulation</h2><div class="scroll"><table><tr><th>Page</th>`+
   [...Array(k)].map((_,i)=>`<th>Frame ${i+1}</th>`).join('')+'<th>Status</th></tr>';
  r.steps.forEach(s=>{
   h+=`<tr><td><b>${s.p}</b></td>`+s.fr.map(v=>`<td>${v===null?'&mdash;':v}</td>`).join('')+
@@ -78,12 +85,18 @@ function stepTable(r,k){
  return h+'</table></div>'}
 
 function summary(r){
- return `<table style="margin-top:8px"><tr><th>Metric</th><th>${r.algo}</th></tr>
+ return `<h3 style="margin:10px 0 4px;font-size:14px">Performance Summary (${r.algo})</h3>
+ <table style="max-width:400px"><tr><th>Metric</th><th>Expected Output</th></tr>
  <tr><td>Total page references</td><td>${r.n}</td></tr>
  <tr><td>Total page hits</td><td>${r.hits}</td></tr>
  <tr><td>Total page faults</td><td>${r.faults}</td></tr>
  <tr><td>Page hit ratio</td><td>${pct(r.hits,r.n)}</td></tr>
- <tr><td>Page fault ratio</td><td>${pct(r.faults,r.n)}</td></tr></table>`}
+ <tr><td>Page fault ratio</td><td>${pct(r.faults,r.n)}</td></tr></table>
+ <div class="formula">
+  <b>Formulas:</b><br>
+  &bull; Hit Ratio = (Page Hits / Total References) &times; 100 = (${r.hits} / ${r.n}) &times; 100 = <b>${pct(r.hits,r.n)}</b><br>
+  &bull; Fault Ratio = (Page Faults / Total References) &times; 100 = (${r.faults} / ${r.n}) &times; 100 = <b>${pct(r.faults,r.n)}</b>
+ </div>`}
 
 function run(){
  $('err').textContent='';$('out').innerHTML='';
@@ -102,16 +115,25 @@ function run(){
  if(res.length>1){
   const min=Math.min(...res.map(r=>r.faults)),max=Math.max(1,...res.map(r=>r.faults));
   const best=res.filter(r=>r.faults===min).map(r=>r.algo);
-  h+=`<div class="card"><h2>Algorithm comparison</h2><table><tr><th>Algorithm</th><th>Page Hits</th><th>Page Faults</th><th>Fault Ratio</th><th style="min-width:160px">Faults</th></tr>`+
-   res.map(r=>`<tr><td>${r.algo}</td><td>${r.hits}</td><td>${r.faults}</td><td>${pct(r.faults,r.n)}</td>
+  h+=`<div class="card"><h2>Algorithm Comparison</h2><table>
+   <tr><th>Algorithm</th><th>Page Hits</th><th>Page Faults</th><th>Hit Ratio</th><th>Fault Ratio</th><th style="min-width:140px">Relative Faults</th></tr>`+
+   res.map(r=>`<tr><td><b>${r.algo}</b></td><td>${r.hits}</td><td>${r.faults}</td><td>${pct(r.hits,r.n)}</td><td>${pct(r.faults,r.n)}</td>
    <td><div class="bar"><i style="width:${100*r.faults/max}%"></i></div></td></tr>`).join('')+
-   `</table><p class="best">Fewest page faults (${min}): ${best.join(', ')}</p>
-   <p><small>Optimal is a theoretical lower bound (it needs to know future requests), so no real algorithm can beat it. Note that for some strings FIFO can get worse with more frames (Belady's anomaly).</small></p></div>`}
+   `</table><p class="best" style="margin-top:10px">Fewest page faults (${min}): ${best.join(', ')}</p>
+   <p><small><b>Analysis:</b> Optimal serves as a theoretical benchmark because it requires future knowledge of page requests. LRU approximates Optimal by looking back at the past, while FIFO simply replaces the oldest loaded page.</small></p></div>`}
  $('out').innerHTML=h}
 
 function err(m){$('err').textContent=m}
 
+function loadPdfSample(){
+ $('refs').value='7 0 1 2 0 3 0 4 2 3';
+ $('k').value=3;
+ $('alg').value='ALL';
+ run()}
+
 function randomRefs(){
  $('refs').value=[...Array(15)].map(()=>Math.floor(Math.random()*8)).join(' ');run()}
 run();
-</script></body></html>
+</script>
+</body>
+</html>
