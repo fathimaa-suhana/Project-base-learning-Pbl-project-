@@ -10,7 +10,16 @@ typedef struct {
 
 int main() {
     key_t loggerKey = ftok("progfile_log", 66);
+    if (loggerKey == -1) {
+        perror("[LOGGER] ftok failed");
+        return 1;
+    }
+
     int loggerQueueId = msgget(loggerKey, 0666 | IPC_CREAT);
+    if (loggerQueueId == -1) {
+        perror("[LOGGER] msgget failed");
+        return 1;
+    }
 
     Message event;
     FILE *logFile = fopen("log.txt", "a");
@@ -23,7 +32,11 @@ int main() {
     printf("[LOGGER] Ready, listening for events from Core...\n");
 
     while (1) {
-        msgrcv(loggerQueueId, &event, sizeof(event), 2, 0);
+        // In System V IPC, msgsz is the size of the payload (excluding type)
+        if (msgrcv(loggerQueueId, &event, sizeof(event.text), 2, 0) == -1) {
+            perror("[LOGGER] msgrcv failed");
+            break;
+        }
         printf("[LOGGER] logged: %s\n", event.text);
 
         fprintf(logFile, "%s\n", event.text);
@@ -36,6 +49,8 @@ int main() {
     }
 
     fclose(logFile);
-    msgctl(loggerQueueId, IPC_RMID, NULL);
+    if (msgctl(loggerQueueId, IPC_RMID, NULL) == -1) {
+        perror("[LOGGER] msgctl IPC_RMID failed");
+    }
     return 0;
 }
